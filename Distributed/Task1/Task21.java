@@ -1,4 +1,8 @@
+
+
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
@@ -6,25 +10,26 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.reduce.IntSumReducer;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
-
 import java.lang.InterruptedException;
 import java.io.IOException;
 
-public class WordCount extends Configured implements Tool {
+public class Task21 extends Configured implements Tool{
 
     public static void main(String[] args) throws Exception {
-        ToolRunner.run(new WordCount(), args);
+        ToolRunner.run(new Task21(), args);
     }
 
+    @Override
     public int run(String[] args) throws Exception {
         Configuration conf = new Configuration();
         Job job = new Job(conf);
-        job.setJarByClass(WordCount.class);
+        job.setJarByClass(Task21.class);
         job.setMapperClass(TaskMapper.class);
         job.setReducerClass(TaskReducer.class);
 
@@ -33,12 +38,12 @@ public class WordCount extends Configured implements Tool {
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
 
-        job.setNumReduceTasks(4);
+        job.setNumReduceTasks(1);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
-        return job.waitForCompletion(true) ? 0 : 1;
+        return job.waitForCompletion(true) ? 0 : -1;
     }
 
     public static class TaskMapper extends Mapper<Text, Text, Text, Text> {
@@ -47,7 +52,8 @@ public class WordCount extends Configured implements Tool {
 
         @Override
         public void map(Text personRaw, Text wordsRaw, Context context)
-                throws IOException, InterruptedException {
+                throws IOException, InterruptedException
+        {
             String persona = personRaw.toString();
             String[] words = wordsRaw.toString().split("[\\p{Punct}\\s ]+");
             if (currentPersona.equals(persona) || currentPersona.equals("")) {
@@ -59,6 +65,7 @@ public class WordCount extends Configured implements Tool {
                 wordsCount = words.length;
             }
         }
+
     }
 
     public static class TaskReducer extends Reducer<Text, Text, Text, Text> {
@@ -72,7 +79,6 @@ public class WordCount extends Configured implements Tool {
                 String[] numbers = value.toString().split(" ");
                 WordsCount += Integer.valueOf(numbers[0]);
                 ReplicsCount += Integer.valueOf(numbers[1]);
-//                context.write(persona, value);
             }
             String dataWrite = (WordsCount.toString()) + " " + (ReplicsCount.toString()) + " " + (new Double(WordsCount*1.0/ReplicsCount).toString());
             context.write(persona, new Text(dataWrite));
